@@ -64,6 +64,7 @@ const AppRoutes = () => (
     <Route path="/" element={<Index />} />
     <Route path="/login" element={<Login />} />
     <Route path="/register-user" element={<RegisterUser />} />
+    <Route path="/register-doctor" element={<RegisterDoctor />} />
     <Route
       element={
         <ProtectedRoute>
