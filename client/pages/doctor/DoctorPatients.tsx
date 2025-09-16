@@ -16,11 +16,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useForm, FormProvider } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { CalendarIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 
 export default function DoctorPatients() {
   const { currentUser, doctors, requests } = useAppState();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [showAddPatient, setShowAddPatient] = useState(false);
 
   const getDoctorProfileId = () => {
     const key = `app:doctor-map:${currentUser?.id || "anon"}`;
@@ -111,6 +119,53 @@ export default function DoctorPatients() {
     navigate(`/doctor/patients/${id}`);
   };
 
+  if (showAddPatient) {
+    return (
+      <div className="mx-auto max-w-3xl p-4 sm:p-6">
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>Add New Patient</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <AddPatientForm
+              onCancel={() => setShowAddPatient(false)}
+              onCreate={(payload) => {
+                const newId = `req_${Date.now()}`;
+                const newUserId = `u_${Date.now()}`;
+                const newReq = {
+                  id: newId,
+                  userId: newUserId,
+                  doctorId: doctorProfileId,
+                  status: "accepted" as const,
+                  createdAt: new Date().toISOString(),
+                  patientName: payload.name,
+                  patientDosha: (payload as any).dosha || null,
+                  plan: defaultPlan,
+                  patientProfile: {
+                    whatsapp: payload.whatsapp,
+                    dob: payload.dob,
+                    address: payload.address,
+                    gender: payload.gender,
+                    heightCm: payload.heightCm,
+                    weightKg: payload.weightKg,
+                    allergies: payload.allergies,
+                    conditions: payload.conditions,
+                    medications: payload.medications,
+                    habits: payload.habits,
+                    sleepPattern: payload.sleepPattern,
+                    digestion: payload.digestion,
+                    notes: payload.notes,
+                    hasPdf: !!payload.medicalDoc,
+                  },
+                };
+                setShowAddPatient(false);
+              }}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -188,7 +243,7 @@ export default function DoctorPatients() {
                 Manage and view your patients' information
               </CardDescription>
             </div>
-            <Button size="sm" className="gap-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600">
+            <Button size="sm" className="gap-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600" onClick={() => setShowAddPatient(true)}>
               <Plus className="h-4 w-4" />
               Add Patient
             </Button>
@@ -294,5 +349,212 @@ export default function DoctorPatients() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+const patientSchema = z.object({
+  name: z.string().min(2, "Full name is required"),
+  gender: z.enum(["male", "female", "other"], { required_error: "Gender is required" }),
+  dob: z.string().min(1, "Date of birth is required"),
+  whatsapp: z.string().regex(/^\d{10}$/, "Must be 10 digits").optional(),
+  address: z.string().min(3, "Address is required").optional(),
+  heightCm: z.string().optional(),
+  weightKg: z.string().optional(),
+  allergies: z.string().optional(),
+  conditions: z.string().optional(),
+  medications: z.string().optional(),
+  habits: z.string().optional(),
+  sleepPattern: z.string().optional(),
+  digestion: z.string().optional(),
+  notes: z.string().optional(),
+  medicalDoc: z.any().optional(),
+});
+
+type PatientFormValues = z.infer<typeof patientSchema>;
+
+function AddPatientForm({
+  onCancel,
+  onCreate,
+}: {
+  onCancel: () => void;
+  onCreate: (payload: PatientFormValues) => void;
+}) {
+  const methods = useForm<PatientFormValues>({
+    resolver: zodResolver(patientSchema),
+    defaultValues: {
+      name: "",
+      gender: "male",
+      dob: "",
+      whatsapp: "",
+      address: "",
+      heightCm: "",
+      weightKg: "",
+      allergies: "",
+      conditions: "",
+      medications: "",
+      habits: "",
+      sleepPattern: "",
+      digestion: "",
+      notes: "",
+      medicalDoc: undefined,
+    },
+    mode: "onTouched",
+  });
+
+  const { register, handleSubmit, setValue, formState } = methods;
+  const { errors } = formState;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.currentTarget.files?.[0];
+    setValue("medicalDoc", file);
+  };
+
+  const submit = (data: PatientFormValues) => {
+    // Normalize address into the shape your dashboard expects (optional:
+    // you can capture structured address fields if you prefer)
+    onCreate(data);
+  };
+
+  return (
+    <FormProvider {...methods}>
+      <form onSubmit={handleSubmit(submit)} className="w-full">
+        <div className="p-6">
+          <Card className="rounded-2xl shadow-md border">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">Add New Patient</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Personal Information */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Personal Information</h3>
+                  <div className="text-sm text-muted-foreground">Required</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Full Name</Label>
+                    <Input {...register("name")} placeholder="John Doe" />
+                    {errors.name && <p className="text-xs text-destructive mt-1">{String(errors.name.message)}</p>}
+                  </div>
+
+                  <div>
+                    <Label>Gender</Label>
+                    <select {...register("gender")} className="w-full rounded-md border px-3 py-2">
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                    {errors.gender && <p className="text-xs text-destructive mt-1">{String(errors.gender.message)}</p>}
+                  </div>
+
+                  <div>
+                    <Label>Date of birth</Label>
+                    <div className="relative">
+                      <CalendarIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input type="date" className="pl-9" {...register("dob")} />
+                    </div>
+                    {errors.dob && <p className="text-xs text-destructive mt-1">{String(errors.dob.message)}</p>}
+                  </div>
+
+                  <div>
+                    <Label>WhatsApp (optional)</Label>
+                    <Input placeholder="9876543210" {...register("whatsapp")} />
+                    {errors.whatsapp && <p className="text-xs text-destructive mt-1">{String(errors.whatsapp.message)}</p>}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Address</Label>
+                    <Textarea placeholder="Street, City, State, Country" {...register("address")} />
+                    {errors.address && <p className="text-xs text-destructive mt-1">{String(errors.address.message)}</p>}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Medical Details */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Medical Details</h3>
+                  <div className="text-sm text-muted-foreground">Optional</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Height (cm)</Label>
+                    <Input type="number" placeholder="e.g. 170" {...register("heightCm")} />
+                  </div>
+                  <div>
+                    <Label>Weight (kg)</Label>
+                    <Input type="number" placeholder="e.g. 65" {...register("weightKg")} />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Allergies</Label>
+                    <Input placeholder="e.g. peanuts, pollen" {...register("allergies")} />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Medical Conditions</Label>
+                    <Textarea placeholder="e.g. diabetes, hypertension" {...register("conditions")} />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Medications</Label>
+                    <Textarea placeholder="Current medications" {...register("medications")} />
+                  </div>
+
+                  <div>
+                    <Label>Upload Medical Document (PDF)</Label>
+                    <Input type="file" accept="application/pdf" onChange={handleFileChange} />
+                    {errors.medicalDoc && <p className="text-xs text-destructive mt-1">{String(errors.medicalDoc.message)}</p>}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Lifestyle */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Lifestyle & Notes</h3>
+                  <div className="text-sm text-muted-foreground">Optional</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Habits</Label>
+                    <Input placeholder="e.g. smoking, alcohol" {...register("habits")} />
+                  </div>
+                  <div>
+                    <Label>Sleep Pattern</Label>
+                    <Input placeholder="e.g. 7-8 hrs" {...register("sleepPattern")} />
+                  </div>
+                  <div>
+                    <Label>Digestion</Label>
+                    <Input placeholder="e.g. normal, weak" {...register("digestion")} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Additional Notes</Label>
+                    <Textarea placeholder="Any extra notes..." {...register("notes")} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-6">
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="px-6">
+                  Create Patient
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </form>
+    </FormProvider>
   );
 }

@@ -89,7 +89,7 @@ export const AppLayout: React.FC = () => {
               <Salad className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">AyurWell</h1>
+              <h1 className="text-lg font-semibold text-gray-900">SwasthaSetu</h1>
               <p className="text-xs text-gray-500">Holistic Nutrition</p>
             </div>
           </div>
@@ -147,7 +147,7 @@ export const AppLayout: React.FC = () => {
             <span>Sign out</span>
           </button>
           <div className="mt-4 text-center">
-            <p className="text-xs text-gray-400">AyurWell v1.0.0</p>
+            <p className="text-xs text-gray-400">SwasthaSetu v1.0.0</p>
           </div>
         </SidebarFooter>
 
@@ -171,7 +171,7 @@ const Topbar: React.FC = () => {
       <div className="flex items-center gap-3">
         <SidebarTrigger className="text-gray-600 hover:text-gray-900 transition-all" />
         <div className="text-lg font-semibold text-gray-900">
-          {currentUser?.role === "doctor" ? "Doctor Dashboard" : "AyurWell"}
+          {currentUser?.role === "doctor" ? "Doctor Pannel" : "Swastha Setu"}
         </div>
       </div>
 
